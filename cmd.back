@@ -1,0 +1,4 @@
+resetCanvas 1000 1000
+setColor 0 0 255
+drawLine 1 100 100 200 110 DDA
+saveCanvas hjx.bmp

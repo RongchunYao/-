@@ -1,0 +1,148 @@
+\documentclass[a4paper,UTF8]{article}
+\usepackage{ctex}
+\usepackage[margin=1.25in]{geometry}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+%\usepackage[thmmarks, amsmath, thref]{ntheorem}
+\theoremstyle{definition}
+\newtheorem*{solution}{Solution}
+\newtheorem*{prove}{Proof}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage[colorlinks,urlcolor=blue]{hyperref}
+\usepackage{enumerate}
+\renewcommand\refname{参考文献}
+
+
+%--
+
+%--
+\begin{document}
+\title{\textbf{《计算机图形学》5月报告}}
+\author{151110079，姚荣春，\href{mailto:15895873878@163.com}{15895873878@163.com}}
+\maketitle
+
+\section{综述}
+图形学大作业期中报告，计划使用python3+pyqt5来实现。目前实现了命令行界面和图形化界面，可以从文本文件中读取命令执行，也可以通过简单的GUI进行绘图。功能上实现了重置画布，保存画布，设置画笔颜色，绘制线段，绘制多边形，绘制椭圆，绘制曲线，图元平移这几个功能。本次报告不涉及到性能测试，所有功能完成后再进行统一的性能测试。
+
+\section{系统框架设计}
+
+\begin{enumerate}
+\item 程序入口文件与GUI实现：graphic.py
+\item 画布相关与命令处理：canvas.py 
+\item 保存输出图像：bmp.py
+\item 核心代码模块：line.py polygon.py curve.py ellipse.py
+\end{enumerate}
+
+需要下载安全pyqt：pip3 install PyQt5
+
+通过python3 graphic.py命令来启动图形化界面或者通过python3 graphic.py cmd.txt命令来执行命令行命令。graphic类初始化后形成一个简单的图形界面，之后通过将用户鼠标点击的信息转化为一系列核心代码所能执行的命令，通过调用line.py等类中的绘制函数进行图形绘制。canvas.py继承了bmp.py因此是具有保存bmp功能的一个画布类，所有的图形也都通过相关类来实现，比如多边形类，直线类。画布类使用一个队列来保存画布上的所有图形类的实例，绝大部分的功能都是通过画布类的方法来实现，通过向队列中添加相关图形的类的实例来达到在画布中增加图形的目的。各个图形对应的一些比如平移裁剪等功能在各自类的相应方法中实现。
+
+\section{系统功能介绍}
+
+使用命令行：将命令储存在cmd.txt文件中，运行python3 graphic.py cmd.txt来执行cmd.txt中的命令
+
+使用图形化界面：运行python3 graphic.py会启动图形化界面，具体功能如下：
+
+\begin{enumerate}
+\item 画直线：点击右下角的直线按钮后在图像上点击用于确定直线的两个点，再次点击直线按钮后画布上会显示出直线，默认使用DDA算法。
+\item 画多边形：点击右下角的多边形按钮后，在画布上点击多个用于确定多边形的点，再次点击多边形按钮后，画布上会显示出多边形，默认使用DDA算法。 
+\item 画椭圆：点击右下角的椭圆按钮后，在画布上点击三个点，第一个点的坐标用于确定圆心（x,y)，第二个点的横坐标记为x2,则x2-x作为横轴长度。第三个的点的纵坐标记为y3则y3-x作为椭圆的纵轴长度。再次点击多边形按钮后，画布上会显示出椭圆。 
+\item 画曲线：点击右下角的曲线按钮，在图像上点击用于确定曲线的多个控制点，再次点击曲线按钮后画布上会显示出一条曲线，默认使用B-spline算法且使用的是Clamped节点设置方法。
+\item 保存图片：点击右下角的图片保存按钮即可完成图片保存，输出图片名默认为output.jpg。
+\item 修改画笔颜色，保存时设置图片名称等功能尚未实现
+
+\end{enumerate}
+
+
+\section{算法介绍}
+
+\noindent{}1.重置画布\\
+
+\indent{}实现思想：在画布类中使用numpy数组来保存R,B,G三种颜色，重置的时候清空numpy数组并重新根据大小申请空间，并调用垃圾回收函数\\
+
+\noindent{}2.保存画布\\
+
+\indent{}实现原理：根据博客上的BMP格式详解直接构造BMP文件头和结构头，采用24位色彩按照BGR的顺序讲画布中的数据以二进制方式写入到文件\\
+\indent{}\refname{BMP格式详解 https://www.cnblogs.com/wainiwann/p/7086844.html}\\
+
+\noindent{}3.设置画笔颜色\\
+
+\indent{}实现思想：根据参数直接修改画布类中的色彩\\
+
+\noindent{}4.绘制线段\\
+
+\indent{}DDA算法实现原理：记斜率为r，若r<1则沿x轴从x1点开始向x2点增长，记初始y值为y1,所计算点所对应的y值为$y'+r$ 其中$y'$为上一个点计算的y值，而最终涂色的像素的y坐标为$y'+r$的四舍五入。若r>1则从y1开始增长y的值，利用y去计算所对应的x的值。\\
+\indent{}Bresenham算法实现原理：
+同DDA中一样根据斜率选取利用x坐标计算y坐标或者反之。以利用x计算y为例(并且x的取值按照y增长的方向)，因为y只有可能是y'+1或者维持y'不变。因此，记y=rx+c计算出来的y值为$y_{real}$在$y'+1-y_{real}<y_{real}-y'$的情况下坐标为y'+1否则维持不动。所以问题变为如何确定不等式是否成立。$r=(y2-y1)/(x2-x1)$如果x2>x1则左右同乘$x2-x1$否则乘$x1-x2$，那么确定不等式是否成立只需要进行整数乘法，从而避免了浮点数运算。如图\ref{fig:图1}中所示，(end\_x-start\_x)*(2*tmp\_y+1-2*start\_y)<2*(end\_y-start\_y)*(index\_x-start\_x)为Bresenham实现的核心部分：即不等式是否成立的指示变量。\\
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=0.8\textwidth]{图1.png} % requires the graphicx package
+   \caption{Bresenham算法代码}
+   \label{fig:图1}
+   %\vspace{0.8cm} % 用来调整和下方文字的间距
+\end{figure}
+
+\noindent{}5.绘制多边形\\
+
+\indent{}实现方法：继承直线的类，调用绘制直线方法进行绘制多边形\\
+
+\noindent{}6.绘制椭圆\\
+
+\indent{}实现原理：中心圆算法。与直线的Bresenham算法思想相近，设椭圆的圆心为（x,y），横纵轴长度分别为rx,ry，从（x,y+ry）起始，圆周曲线的斜率小于1，设当前点的纵坐标为yt,当前横坐标为xt,那么xt+1点的纵坐标应为yt或yt-1,用于判别是否使用yt-1的不等式为${\frac{xt-x}{rx}^2+{\frac{yt-0.5}{ry}}^2-1}$即（xt,yt-0.5）是否在椭圆内部。如果在椭圆内，则说明ty作为纵坐标更为合适，如果不在则以yt-1作为当前的纵坐标。当斜率小于1时，从（x+rx,y）起始，不断移动纵坐标来计算横坐标，直到斜率等于1。判定（xt,yt）点附近是否斜率为1可以用以下不等式：ry*ry*xt-rx*rx*yt。当第一象限内的所有点都画完之后，根据第一象限内的点坐标来确定其他象限内对应点的坐标。椭圆算法的部分核心代码如图\ref{fig:图2}所示。\\
+
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=0.8\textwidth]{图2.png} % requires the graphicx package
+   \caption{中心圆算法代码}
+   \label{fig:图2}
+   %\vspace{0.8cm} % 用来调整和下方文字的间距
+\end{figure}
+
+\noindent{}7.绘制曲线\\
+
+\indent{}参考文章：
+
+http://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/
+
+https://zhuanlan.zhihu.com/p/50626506\\
+
+
+\indent{}B-spline算法理解：B-spline算法根据n个控制点来绘制曲线。每个点的横纵坐标都由各个控制点的坐标乘以其对该点的影响参数来决定，为了确定每个控制点对计算点的影响大小，B-spline引入了一个算法公式\ref{fig:图3}。第i个控制点的影响因子为$F(u,i)=N_{i,deg}(t)$。算法公式的计算所需要的参数为阶数和节点数组，这两个数据是受到人为定义的。人们可以通过改变阶数与节点数组的分布来画出不用的B样条曲线。
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=0.8\textwidth]{图3.png} % requires the graphicx package
+   \caption{B样条基本公式}\footnote{http://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/B-spline/bspline-basis.html}
+   \label{fig:图3}
+   %\vspace{0.8cm} % 用来调整和下方文字的间距
+\end{figure}
+
+\indent{}B-spline算法基本公式：图\ref{fig:图3}为B样条曲线的基本公式，B样条曲线通过此公式来计算曲线上各个点的横纵坐标，其中参数u的意义为当前点在曲线中的比重，比如曲线中点的比重为0.5，起始点为0。数组$u$为节点数组，其中的点由0向1单调递增，节点个数为阶数+控制点个数+1，其中的值可以有多种分布形式，如果均匀分布则曲线为均匀B样条曲线即节点数组中两个点之间的大小差值为节点数分之一。除了均匀分布以外还有clamped等分布方式。
+
+\indent{}B-spline算法实现原理：记u为所生成点所对应整条曲线的比重（u为0-1之间的小数），比重u所对应的坐标点为$C(u)=\Sigma_{i=0}^{n-1}N_{i,deg}(t)P_i$，其中n为控制点个数即为画曲线命令所输入的点的个数，$P_i$为第i个点的横纵坐标，deg为阶数。B-spline算法的具体实现如图\ref{fig:图4}所示，支持任何合理阶数，由于命令行不要求输入阶数，我将阶数默认设置为3，所此采用的节点分布为clamped，因为这样画出的曲线初始点和末位点与第一个控制节点最后一个控制节点分别重合看起来美观。
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=0.8\textwidth]{图4.png} % requires the graphicx package
+   \caption{B样条算法实现}
+   \label{fig:图4}
+   %\vspace{0.8cm} % 用来调整和下方文字的间距
+\end{figure}
+
+\indent{}Bezier算法原理：下次再写。
+
+\section{总结}
+\dots
+期末在写
+
+\bibliographystyle{plain}%
+%"xxx" should be your citing file's name.
+\bibliography{xxx}
+
+\end{document}
